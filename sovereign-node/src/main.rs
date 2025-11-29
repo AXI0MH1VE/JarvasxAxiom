@@ -1,9 +1,8 @@
-use std::sync::Arc;
-use std::time::SystemTime;
-use env_logger;
-use tokio::sync::Mutex;
 use sovereign_core::CognitiveCore;
 use sovereign_runtime_wasm::WasmRuntime;
+use std::sync::Arc;
+use std::time::SystemTime;
+use tokio::sync::Mutex;
 
 mod service_loop;
 

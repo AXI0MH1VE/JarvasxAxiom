@@ -1,4 +1,3 @@
-use serde_json;
 use anyhow::Result;
 
 pub struct CognitiveCore {
@@ -7,7 +6,7 @@ pub struct CognitiveCore {
 
 impl CognitiveCore {
     pub fn new() -> Result<Self> {
-        Ok(Self { })
+        Ok(Self {})
     }
 
     pub fn run(&mut self, query: &str, params: serde_json::Value) -> Result<serde_json::Value> {

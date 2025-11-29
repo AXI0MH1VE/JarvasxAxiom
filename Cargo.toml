@@ -1,10 +1,16 @@
 [workspace]
 members = [
+    "sovereign-node",
     "sovereign-protocol",
     "sovereign-mesh",
     "sovereign-finance",
     "sovereign-core",
     "sovereign-runtime-wasm",
-    "sovereign-node"
 ]
 resolver = "2"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true

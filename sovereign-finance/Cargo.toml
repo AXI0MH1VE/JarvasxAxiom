@@ -1,11 +1,12 @@
 [package]
 name = "sovereign-finance"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 
 [dependencies]
-bdk = { version = "0.30.0", features = ["electrum"] }
+bdk = { version = "0.29.0", features = ["electrum"] }
+# Pinning sha2 ensures hash compatibility with other crates
 sha2 = "0.10"
-hex = "0.4"
 log = "0.4"
 anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }

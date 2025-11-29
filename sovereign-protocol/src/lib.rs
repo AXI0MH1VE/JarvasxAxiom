@@ -38,10 +38,7 @@ pub enum Response {
     CoreResult(serde_json::Value),
     WasmOutput(String),
     MeshGeneric(String),
-    LicenseResult {
-        valid: bool,
-        details: String,
-    },
+    LicenseResult { valid: bool, details: String },
     Error(String),
 }
 
