@@ -1,0 +1,8 @@
+[package]
+name = "sovereign-runtime-wasm"
+version = "0.3.0"
+edition = "2021"
+
+[dependencies]
+wasmtime = "39.0"
+anyhow = "1.0"

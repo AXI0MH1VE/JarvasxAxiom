@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "sovereign-protocol",
+    "sovereign-mesh",
+    "sovereign-finance",
+    "sovereign-core",
+    "sovereign-runtime-wasm",
+    "sovereign-node"
+]
+resolver = "2"
