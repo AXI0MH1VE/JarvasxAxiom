@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize core and wasm
     let core = Arc::new(Mutex::new(CognitiveCore::new()?));
-    let wasm = WasmRuntime::new()?;
+    let wasm = Arc::new(WasmRuntime::new()?);
 
     service_loop::run_ipc_server(core, wasm, start_time).await
 }

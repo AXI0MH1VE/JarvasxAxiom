@@ -3,7 +3,7 @@ use std::time::SystemTime;
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::net::UnixListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use log::{info, error};
+use log::info;
 use serde_json;
 use sovereign_protocol::{Request, Response, NodeStatus};
 use sovereign_core::CognitiveCore;
@@ -20,7 +20,7 @@ struct SharedState {
 
 pub async fn run_ipc_server(
     core: Arc<Mutex<CognitiveCore>>,
-    wasm: WasmRuntime,
+    wasm: Arc<WasmRuntime>,
     start_time: SystemTime,
 ) -> Result<()> {
     // 1. Hardware Identity
@@ -66,7 +66,7 @@ pub async fn run_ipc_server(
     loop {
         let (mut stream, _) = listener.accept().await?;
         let core = core.clone();
-        let wasm = &wasm;
+        let wasm_clone = wasm.clone();
         let mesh = mesh_tx.clone();
         let finance = finance.clone();
         let state = state.clone();
@@ -104,8 +104,9 @@ pub async fn run_ipc_server(
                             Err(e) => Response::Error(e.to_string()),
                         }
                     },
-                    Request::RunWasm { path, input } => {
-                        let res = tokio::task::spawn_blocking(|| wasm.run_module(&vec![], &input)).await;
+                    Request::RunWasm { path: _, input } => {
+                        let wasm_for_task = wasm_clone.clone();
+                        let res = tokio::task::spawn_blocking(move || wasm_for_task.run_module(&vec![], &input)).await;
                         match res {
                             Ok(Ok(out)) => Response::WasmOutput(out),
                             Ok(Err(e)) => Response::Error(e.to_string()),

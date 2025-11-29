@@ -1,13 +1,12 @@
-use futures::{future::Either, StreamExt};
+use futures::StreamExt;
 use libp2p::{
     gossipsub, kad, mdns, noise,
-    pnet::{PnetConfig, PreSharedKey},
-    swarm::{NetworkBehaviour, SwarmEvent},
-    tcp, yamux, Multiaddr, PeerId, Swarm, SwarmBuilder, Transport,
+    swarm::{NetworkBehaviour, SwarmEvent, Config},
+    tcp, yamux, Multiaddr, PeerId, Swarm, Transport,
 };
 use std::path::Path;
 use tokio::sync::{mpsc, oneshot};
-use log::{info, error, warn};
+use log::info;
 
 #[derive(NetworkBehaviour)]
 #[behaviour(to_swarm = "SovereignBehaviourEvent")]
@@ -54,30 +53,15 @@ impl MeshNode {
         let peer_id = PeerId::from(id_keys.public());
         info!("Mesh Identity Initialized: {}", peer_id);
 
-        let psk = load_swarm_key(key_path).map_err(|e| {
-            warn!("Swarm key error: {}. Mesh is OPEN/UNSECURE.", e);
-            e
-        }).ok();
-
-        // Build transport with PNet conditionally
+        // Build transport
         let tcp_config = tcp::Config::default().nodelay(true);
         let noise_config = noise::Config::new(&id_keys).expect("Noise key gen failed");
 
-        let tcp_transport = tcp::tokio::Transport::new(tcp_config);
-        let transport = if let Some(key) = psk {
-            tcp_transport
-                .and_then(move |socket, _| Either::Left(PnetConfig::new(key).handshake(socket)))
-                .upgrade(libp2p::core::upgrade::Version::V1)
-                .authenticate(noise_config)
-                .multiplex(yamux::Config::default())
-                .boxed()
-        } else {
-            tcp_transport
-                .upgrade(libp2p::core::upgrade::Version::V1)
-                .authenticate(noise_config)
-                .multiplex(yamux::Config::default())
-                .boxed()
-        };
+        let transport = tcp::tokio::Transport::new(tcp_config)
+            .upgrade(libp2p::core::upgrade::Version::V1)
+            .authenticate(noise_config)
+            .multiplex(yamux::Config::default())
+            .boxed();
 
         let gossipsub = gossipsub::Behaviour::new(
             gossipsub::MessageAuthenticity::Signed(id_keys.clone()),
@@ -88,9 +72,8 @@ impl MeshNode {
         let mdns = mdns::tokio::Behaviour::new(mdns::Config::default(), peer_id)?;
         let behaviour = SovereignBehaviour { gossipsub, kademlia, mdns };
 
-        // Use legacy Swarm constructor since we have custom transport
-        let swarm = Swarm::new(transport, behaviour, peer_id);
-        let mut swarm = swarm;
+        // Create Swarm with default config
+        let mut swarm = Swarm::new(transport, behaviour, peer_id, Config::with_tokio_executor());
         swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
         Ok(Self { swarm, command_rx })
     }
@@ -123,20 +106,4 @@ impl MeshNode {
             }
         }
     }
-}
-
-/// Parses standard IPFS swarm.key files
-fn load_swarm_key(path: &Path) -> anyhow::Result<PreSharedKey> {
-    let content = std::fs::read_to_string(path)?;
-    let mut lines = content.lines();
-    if lines.next()!= Some("/key/swarm/psk/1.0.0/") {
-        return Err(anyhow::anyhow!("Invalid swarm key header"));
-    }
-    if lines.next()!= Some("/base16/") {
-        return Err(anyhow::anyhow!("Unsupported encoding"));
-    }
-    let key_hex = lines.next().ok_or(anyhow::anyhow!("Missing key data"))?;
-    let bytes = hex::decode(key_hex.trim())?;
-    let key_arr: [u8; 32] = bytes.try_into().map_err(|_| anyhow::anyhow!("Key must be exactly 32 bytes"))?;
-    Ok(PreSharedKey::new(key_arr))
 }
